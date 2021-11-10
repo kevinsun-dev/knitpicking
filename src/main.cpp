@@ -5,9 +5,33 @@
 const int dirPin = 32;
 const int stepPin = 14;
 const int servoPin = 33;
+const int calibrationPin = 15;
 const int motorInterfaceType = 1;
 
+const int PIN_COUNT = 100;
+const int STEPS_PER_TURN = 600;
+const int WRAP_MOVE = 18;
+
+const int ARM_EXT = 160;
+const int ARM_RTCT = 90;
+const int ARM_DELAY = 300;
+
 #define INPUT_SIZE 30
+
+// Create a new instance of the AccelStepper class:
+AccelStepper stepper = AccelStepper(motorInterfaceType, stepPin, dirPin);
+Servo armServo;
+
+int currentPin = 0;
+int pinOffset = 0;
+
+void setup()
+{
+  // Set the maximum speed in steps per second:
+  Serial.begin(9600);
+  stepper.setMaxSpeed(1000);
+  armServo.attach(servoPin);
+}
 
 String getValue(String data, char separator, int index)
 {
@@ -27,16 +51,32 @@ String getValue(String data, char separator, int index)
   return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
 
-// Create a new instance of the AccelStepper class:
-AccelStepper stepper = AccelStepper(motorInterfaceType, stepPin, dirPin);
-Servo armServo;
-
-void setup()
+void goToPin(int pin)
 {
-  // Set the maximum speed in steps per second:
-  Serial.begin(9600);
-  stepper.setMaxSpeed(1000);
-  armServo.attach(servoPin);
+  int pinDiff = pin - currentPin;
+  if (abs(pin - (currentPin + PIN_COUNT)) < abs(pinDiff))
+    pinDiff = pin - (currentPin + PIN_COUNT);
+  int posDiff = pinDiff * (STEPS_PER_TURN / PIN_COUNT);
+  stepper.setAcceleration(100);
+  stepper.moveTo(posDiff);
+  while (stepper.distanceToGo() != 0)
+  {
+    stepper.run();
+  }
+  currentPin = pin;
+}
+
+void wrapPin()
+{
+  armServo.write(ARM_RTCT);
+  delay(ARM_DELAY);
+  stepper.move(WRAP_MOVE);
+  while (stepper.distanceToGo() != 0)
+  {
+    stepper.run();
+  }
+  delay(ARM_DELAY);
+  armServo.write(ARM_EXT);
 }
 
 void loop()
@@ -44,24 +84,11 @@ void loop()
   if (Serial.available())
   {
     String command = Serial.readStringUntil('\n');
-    int angle = command.toInt();
-    stepper.setAcceleration(100);
-    stepper.moveTo(angle);
-    while (stepper.distanceToGo() != 0)
-    {
-      stepper.run();
-    }
-    armServo.write(90);
-    delay(500);
-    stepper.moveTo(angle+18);
-    while (stepper.distanceToGo() != 0)
-    {
-      stepper.run();
-    }
-    delay(500);
-    armServo.write(160);
+    int nextPin = command.toInt();
+    goToPin(nextPin);
+    wrapPin();
 
-    Serial.print("Stepper: ");
-    Serial.println(angle);
+    Serial.print("Current Pin: ");
+    Serial.println(currentPin);
   }
 }
