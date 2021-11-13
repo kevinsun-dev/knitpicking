@@ -13,7 +13,7 @@ final int DELIMITER = '\n';
 // points around the circle
 final int numberOfPoints = 150;
 // self-documenting
-final int numberOfLinesToDrawPerFrame = 5;
+final int numberOfLinesToDrawPerFrame = 1;
 // how thick are the threads?
 final float lineWeight = 1.2;  // default 1
 final float stringAlpha = 48; // 0...255 with 0 being totally transparent.
@@ -150,6 +150,7 @@ void setup() {
   println(Serial.list());
   println(Serial.list()[3]);
   port = new Serial(this, Serial.list()[3], 9600);
+  port.bufferUntil(DELIMITER); 
 
   ready=false;
   selectInput("Select an image file","inputSelected");
@@ -549,8 +550,12 @@ void drawToDest(int start, int end, color c) {
   
   finishedLines.add(new FinishedLine(start,end,c));
   port.write(end);
-  while (port.available() == 0) {}
-  String incoming = port.readStringUntil(DELIMITER);
+  println(end);
+  String incoming = null;
+  while (incoming == null) {
+      incoming = port.readStringUntil(DELIMITER);
+      delay(50);
+  }
   println(incoming);
 }
 

@@ -29,7 +29,7 @@ void setup()
 {
   // Set the maximum speed in steps per second:
   Serial.begin(9600);
-  stepper.setMaxSpeed(1000);
+  stepper.setMaxSpeed(5000);
   armServo.attach(servoPin);
 }
 
@@ -57,7 +57,7 @@ void goToPin(int pin)
   if (abs(pin - (currentPin + PIN_COUNT)) < abs(pinDiff))
     pinDiff = pin - (currentPin + PIN_COUNT);
   int posDiff = pinDiff * (STEPS_PER_TURN / PIN_COUNT);
-  stepper.setAcceleration(100);
+  stepper.setAcceleration(2000);
   stepper.moveTo(posDiff);
   while (stepper.distanceToGo() != 0)
   {
@@ -88,7 +88,11 @@ void loop()
     goToPin(nextPin);
     wrapPin();
 
+    while (Serial.available() > 0)
+    {
+    }
     Serial.print("Current Pin: ");
-    Serial.println(currentPin);
+    Serial.print(currentPin);
+    Serial.println(".");
   }
 }
