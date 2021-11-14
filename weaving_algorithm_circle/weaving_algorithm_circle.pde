@@ -549,7 +549,7 @@ void drawToDest(int start, int end, color c) {
   dest.endDraw();
   
   finishedLines.add(new FinishedLine(start,end,c));
-  port.write(end);
+  port.write(Integer.toString(end));
   println(end);
   String incoming = null;
   while (incoming == null) {
