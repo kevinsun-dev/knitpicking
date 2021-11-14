@@ -11,7 +11,7 @@ Serial port;
 final int DELIMITER = '\n';
 
 // points around the circle
-final int numberOfPoints = 150;
+final int numberOfPoints = 50;
 // self-documenting
 final int numberOfLinesToDrawPerFrame = 1;
 // how thick are the threads?

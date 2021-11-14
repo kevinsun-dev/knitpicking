@@ -8,12 +8,12 @@ const int servoPin = 33;
 const int calibrationPin = 15;
 const int motorInterfaceType = 1;
 
-const int PIN_COUNT = 100;
+const int PIN_COUNT = 50;
 const int STEPS_PER_TURN = 600;
 const int WRAP_MOVE = 18;
 
-const int ARM_EXT = 160;
-const int ARM_RTCT = 90;
+const int ARM_EXT = 170;
+const int ARM_RTCT = 70;
 const int ARM_DELAY = 300;
 
 #define INPUT_SIZE 30
@@ -29,7 +29,7 @@ void setup()
 {
   // Set the maximum speed in steps per second:
   Serial.begin(9600);
-  stepper.setMaxSpeed(5000);
+  stepper.setMaxSpeed(3000);
   armServo.attach(servoPin);
 }
 
@@ -54,15 +54,17 @@ String getValue(String data, char separator, int index)
 void goToPin(int pin)
 {
   int pinDiff = pin - currentPin;
-  if (abs(pin - (currentPin + PIN_COUNT)) < abs(pinDiff))
-    pinDiff = pin - (currentPin + PIN_COUNT);
+  // if (abs(pin - (currentPin + PIN_COUNT)) < abs(pinDiff))
+  //   pinDiff = pin - (currentPin + PIN_COUNT);
   int posDiff = pinDiff * (STEPS_PER_TURN / PIN_COUNT);
-  stepper.setAcceleration(2000);
+  stepper.setAcceleration(500);
   stepper.moveTo(posDiff);
   while (stepper.distanceToGo() != 0)
   {
     stepper.run();
   }
+  stepper.stop();
+  stepper.runToPosition();
   currentPin = pin;
 }
 
@@ -75,6 +77,8 @@ void wrapPin()
   {
     stepper.run();
   }
+  stepper.stop();
+  stepper.runToPosition();
   delay(ARM_DELAY);
   armServo.write(ARM_EXT);
 }
