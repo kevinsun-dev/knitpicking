@@ -11,7 +11,7 @@ Serial port;
 final int DELIMITER = '\n';
 
 // points around the circle
-final int numberOfPoints = 75;
+final int numberOfPoints = 250;
 // self-documenting
 final int numberOfLinesToDrawPerFrame = 1;
 // how thick are the threads?
@@ -147,10 +147,10 @@ Octree tree = new Octree();
 void setup() {
   // make the window.  must be (h*2,h+20)
   size(800,820);
-  println(Serial.list());
-  println(Serial.list()[3]);
-  port = new Serial(this, Serial.list()[3], 9600);
-  port.bufferUntil(DELIMITER); 
+  //println(Serial.list());
+  //println(Serial.list()[3]);
+  //port = new Serial(this, Serial.list()[3], 9600);
+  //port.bufferUntil(DELIMITER); 
 
   ready=false;
   selectInput("Select an image file","inputSelected");
@@ -549,14 +549,6 @@ void drawToDest(int start, int end, color c) {
   dest.endDraw();
   
   finishedLines.add(new FinishedLine(start,end,c));
-  port.write(Integer.toString(end));
-  println(end);
-  String incoming = null;
-  while (incoming == null) {
-      incoming = port.readStringUntil(DELIMITER);
-      delay(50);
-  }
-  println(incoming);
 }
 
 

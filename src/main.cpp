@@ -2,19 +2,20 @@
 #include <ESP32Servo.h>
 
 // Define stepper motor connections and motor interface type. Motor interface type must be set to 1 when using a driver:
-const int dirPin = 32;
-const int stepPin = 14;
-const int servoPin = 33;
-const int calibrationPin = 15;
+const int dirPin = 12;
+const int stepPin = 13;
+const int servoPin = 23;
+const int calibrationPin = 4;
 const int motorInterfaceType = 1;
 
-const int PIN_COUNT = 50;
+const int PIN_COUNT = 75;
 const int STEPS_PER_TURN = 600;
-const int WRAP_MOVE = 18;
+const int WRAP_MOVE = (STEPS_PER_TURN / PIN_COUNT);
+const long CALIB_DEBOUNCE = 200;
 
-const int ARM_EXT = 170;
-const int ARM_RTCT = 70;
-const int ARM_DELAY = 300;
+const int ARM_EXT = 180;
+const int ARM_RTCT = 20;
+const int ARM_DELAY = 500;
 
 #define INPUT_SIZE 30
 
@@ -23,14 +24,36 @@ AccelStepper stepper = AccelStepper(motorInterfaceType, stepPin, dirPin);
 Servo armServo;
 
 int currentPin = 0;
+int currentPosition = 0;
 int pinOffset = 0;
+bool negativeTurnBoost = false;
 
 void setup()
 {
   // Set the maximum speed in steps per second:
   Serial.begin(9600);
-  stepper.setMaxSpeed(3000);
+  stepper.setMaxSpeed(2000);
+  stepper.setAcceleration(100);
   armServo.attach(servoPin);
+  Serial.println("Beginnning Calibration");
+  stepper.move(STEPS_PER_TURN);
+  int indexingR = LOW;
+  int prevReading = LOW;
+  int time = 0;
+  while (stepper.distanceToGo() != 0)
+  {
+    indexingR = digitalRead(calibrationPin);
+    if (indexingR == HIGH && prevReading == LOW && millis() - time > CALIB_DEBOUNCE){
+      currentPosition = stepper.distanceToGo();
+      time = millis();
+    }
+    prevReading = indexingR;
+    stepper.run();
+  }
+  stepper.move(-currentPosition+(0.32*STEPS_PER_TURN) + 4);
+  stepper.runToPosition();
+  stepper.setCurrentPosition(0);
+  Serial.println("Ready");
 }
 
 String getValue(String data, char separator, int index)
@@ -54,16 +77,13 @@ String getValue(String data, char separator, int index)
 void goToPin(int pin)
 {
   int pinDiff = pin - currentPin;
-  // if (abs(pin - (currentPin + PIN_COUNT)) < abs(pinDiff))
-  //   pinDiff = pin - (currentPin + PIN_COUNT);
-  int posDiff = pinDiff * (STEPS_PER_TURN / PIN_COUNT);
-  stepper.setAcceleration(500);
+  if (abs(pin - (currentPin + PIN_COUNT)) < abs(pinDiff))
+    pinDiff = pin - (currentPin + PIN_COUNT);
+  int posDiff = pin * ((double) STEPS_PER_TURN / PIN_COUNT);
   stepper.moveTo(posDiff);
-  while (stepper.distanceToGo() != 0)
-  {
-    stepper.run();
+  if (stepper.distanceToGo() < 0){
+    negativeTurnBoost = true;
   }
-  stepper.stop();
   stepper.runToPosition();
   currentPin = pin;
 }
@@ -72,15 +92,21 @@ void wrapPin()
 {
   armServo.write(ARM_RTCT);
   delay(ARM_DELAY);
-  stepper.move(WRAP_MOVE);
-  while (stepper.distanceToGo() != 0)
-  {
-    stepper.run();
+  if (negativeTurnBoost){
+    stepper.move(WRAP_MOVE + 4);
+  } else {
+    stepper.move(WRAP_MOVE);
   }
-  stepper.stop();
   stepper.runToPosition();
-  delay(ARM_DELAY);
   armServo.write(ARM_EXT);
+  delay(ARM_DELAY);
+  if (negativeTurnBoost){
+    stepper.move(-WRAP_MOVE - 2);
+    negativeTurnBoost = false;
+  } else {
+    stepper.move(-WRAP_MOVE + 1);
+  }
+  stepper.runToPosition();
 }
 
 void loop()
